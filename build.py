@@ -327,6 +327,7 @@ def backend_repo(be):
 def backend_cmake_args(images, components, be, install_dir, library_paths):
     if be == 'onnxruntime':
         args = onnxruntime_cmake_args(images, library_paths)
+        print(args)
     elif be == 'openvino':
         args = openvino_cmake_args()
     elif be == 'tensorflow1':
@@ -385,6 +386,10 @@ def onnxruntime_cmake_args(images, library_paths):
         '-DTRITON_BUILD_ONNXRUNTIME_VERSION={}'.format(
             TRITON_VERSION_MAP[FLAGS.version][2])
     ]
+    if FLAGS.enable_gpu:
+        cargs.append('-DTRITON_ENABLE_ONNXRUNTIME_TENSORRT=ON')
+    else:
+        cargs.append('-DTRITON_ENABLE_GPU=OFF')
 
     # ONNX-TRT support is currently disabled since TRT 8 is not supported
     cargs.append('-DTRITON_ENABLE_ONNXRUNTIME_TENSORRT=OFF')
@@ -411,7 +416,8 @@ def onnxruntime_cmake_args(images, library_paths):
                 cargs.append('-DTRITON_BUILD_CONTAINER_VERSION={}'.format(
                     TRITON_VERSION_MAP[FLAGS.version][1]))
 
-            if TRITON_VERSION_MAP[FLAGS.version][3] is not None:
+            if TRITON_VERSION_MAP[
+                    FLAGS.version][3] is not None and FLAGS.enable_gpu:
                 cargs.append('-DTRITON_ENABLE_ONNXRUNTIME_OPENVINO=ON')
                 cargs.append(
                     '-DTRITON_BUILD_ONNXRUNTIME_OPENVINO_VERSION={}'.format(
@@ -604,7 +610,16 @@ RUN rm -fr *
 COPY . .
 ENTRYPOINT []
 '''
-        df += install_dcgm_libraries(argmap['DCGM_VERSION'])
+        if FLAGS.enable_gpu:
+            df += install_dcgm_libraries(argmap['DCGM_VERSION'])
+        else:
+            df += '''
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+            git \
+            libnuma-dev && \
+    rm -rf /var/lib/apt/lists/*
+'''
 
     df += '''
 ENV TRITON_SERVER_VERSION ${TRITON_VERSION}
@@ -674,7 +689,7 @@ FROM ${{BASE_IMAGE}}
 '''.format(argmap['TRITON_VERSION'], argmap['TRITON_CONTAINER_VERSION'],
            argmap['BASE_IMAGE'])
 
-    df += dockerfile_prepare_container_linux(argmap, backends)
+    df += dockerfile_prepare_container_linux(argmap, backends, FLAGS.enable_gpu)
 
     df += '''
 WORKDIR /opt/tritonserver
@@ -718,7 +733,7 @@ COPY --chown=1000:1000 --from=tritonserver_build /workspace/build/sagemaker/serv
         dfile.write(df)
 
 
-def dockerfile_prepare_container_linux(argmap, backends):
+def dockerfile_prepare_container_linux(argmap, backends, enable_gpu):
     # Common steps to produce docker images shared by build.py and compose.py.
     # Sets enviroment variables, installs dependencies and adds entrypoint
     df = '''
@@ -760,7 +775,24 @@ RUN apt-get update && \
          libre2-5 && \
     rm -rf /var/lib/apt/lists/*
 '''
-    df += install_dcgm_libraries(argmap['DCGM_VERSION'])
+    if enable_gpu:
+        df += install_dcgm_libraries(argmap['DCGM_VERSION'])
+        df += '''
+# Extra defensive wiring for CUDA Compat lib
+RUN ln -sf ${_CUDA_COMPAT_PATH}/lib.real ${_CUDA_COMPAT_PATH}/lib \
+ && echo ${_CUDA_COMPAT_PATH}/lib > /etc/ld.so.conf.d/00-cuda-compat.conf \
+ && ldconfig \
+ && rm -f ${_CUDA_COMPAT_PATH}/lib 
+'''
+    else:
+        df += '''
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        git \
+        dirmngr \ 
+        libnuma-dev && \
+    rm -rf /var/lib/apt/lists/*
+'''
     # Add dependencies needed for python backend
     if 'python' in backends:
         df += '''
@@ -775,12 +807,6 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 '''
     df += '''
-# Extra defensive wiring for CUDA Compat lib
-RUN ln -sf ${_CUDA_COMPAT_PATH}/lib.real ${_CUDA_COMPAT_PATH}/lib \
- && echo ${_CUDA_COMPAT_PATH}/lib > /etc/ld.so.conf.d/00-cuda-compat.conf \
- && ldconfig \
- && rm -f ${_CUDA_COMPAT_PATH}/lib
-
 WORKDIR /opt/tritonserver
 RUN rm -fr /opt/tritonserver/*
 COPY --chown=1000:1000 nvidia_entrypoint.sh .
