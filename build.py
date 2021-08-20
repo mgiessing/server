@@ -544,6 +544,27 @@ SHELL ["cmd", "/S", "/C"]
 RUN dnf groupinstall -y "Development Tools" && dnf install -y epel-release dnf-plugins-core
 RUN dnf config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo
 RUN dnf install -y docker-ce docker-ce-cli
+RUN dnf install -y \
+            autoconf \
+            automake \
+            git \
+            re2-devel \
+            openssl-devel \
+            libtool \
+            boost-devel \
+            libcurl-devel \
+            libb64-devel \
+            patchelf \
+            python38-devel \
+            python38-pip \
+            python38-setuptools \
+            rapidjson-devel \
+            unzip \
+            wget \
+            zlib-devel \
+            pkgconf \
+            libuuid-devel \
+            numactl-devel
 
 #Libarchive-devel doesn't seem to exist for RPM/ppc64le
 RUN wget https://rpmfind.net/linux/centos/8-stream/PowerTools/ppc64le/os/Packages/libarchive-devel-3.3.3-1.el8.ppc64le.rpm && \
