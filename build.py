@@ -559,6 +559,10 @@ RUN wget https://rpmfind.net/linux/centos/8-stream/PowerTools/ppc64le/os/Package
 
 RUN pip3 install --upgrade pip && \
     pip3 install --upgrade wheel make cmake setuptools docker
+
+RUN git clone https://github.com/jupp0r/prometheus-cpp.git && cd prometheus-cpp && git checkout v0.7.0 && \
+        git submodule init && git submodule update && mkdir _build && cd _build && \
+        cmake .. -DBUILD_SHARED_LIBS=ON && make -j 4 && make install
 '''
 
     # Copy in the triton source. We remove existing contents first in
@@ -579,7 +583,7 @@ ENTRYPOINT []
         df += install_dcgm_libraries()
         df += '''
 #Fails on rpm
-#RUN patch -ruN -d /usr/include/ < /workspace/build/libdcgm/dcgm_api_export.patch
+RUN patch -ruN -d /usr/include/ < /workspace/build/libdcgm/dcgm_api_export.patch
 '''
 
     df += '''
