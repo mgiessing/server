@@ -489,7 +489,7 @@ def install_dcgm_libraries():
 RUN dnf install -y dnf-plugins-core
 RUN dnf config-manager --add-repo http://developer.download.nvidia.com/compute/cuda/repos/rhel8/ppc64le/cuda-rhel8.repo
 RUN dnf clean expire-cache && \
-    dnf install -y datacenter-gpu-manager
+    dnf install -y datacenter-gpu-manager-1:{}-1
 '''.format(dcgm_version)
 
 
