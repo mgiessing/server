@@ -70,7 +70,7 @@ else
   fi
 fi
 
-if ! cat /proc/cpuinfo | grep flags | sort -u | grep avx >& /dev/null; then
+if [ $(uname -m) = "x86_64" ] && ! cat /proc/cpuinfo | grep flags | sort -u | grep avx >& /dev/null; then
   echo
   echo "ERROR: This container was built for CPUs supporting at least the AVX instruction set, but"
   echo "       the CPU detected was $(cat /proc/cpuinfo |grep "model name" | sed 's/^.*: //' | sort -u), which does not report"

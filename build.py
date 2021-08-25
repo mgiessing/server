@@ -58,7 +58,7 @@ from distutils.dir_util import copy_tree
 #      OpenVINO version
 #     )
 TRITON_VERSION_MAP = {
-    '2.8.0': ('21.03', '21.03', '1.6.0', '2021.1.110', '2021.1.110')
+    '2.8.0': ('21.03', '21.03', '1.6.0', None, None)
 }
 
 EXAMPLE_BACKENDS = ['identity', 'square', 'repeat']
@@ -470,45 +470,35 @@ ENV DEBIAN_FRONTEND=noninteractive
 # python3-dev is needed by Torchvision
 # python3-pip is needed by python backend
 # uuid-dev and pkg-config is needed for Azure Storage
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
+RUN dnf groupinstall -y "Development Tools" && dnf install -y dnf-plugins-core epel-release
+RUN dnf config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo
+RUN dnf install -y docker-ce docker-ce-cli
+RUN dnf update -y && \
+    dnf install -y \
             autoconf \
             automake \
-            build-essential \
-            docker.io \
             git \
-            libre2-dev \
-            libssl-dev \
+            re2-devel \
+            openssl-devel \
             libtool \
-            libboost-dev \
-            libcurl4-openssl-dev \
-            libb64-dev \
+            boost-devel \
+            libcurl-devel \
+            libb64-devel \
             patchelf \
-            python3-dev \
-            python3-pip \
-            python3-setuptools \
-            rapidjson-dev \
-            software-properties-common \
+            python38-devel \
+            python38-pip \
+            python38-setuptools \
+            rapidjson-devel \
             unzip \
             wget \
-            zlib1g-dev \
-            pkg-config \
-            uuid-dev && \
-    rm -rf /var/lib/apt/lists/*
+            zlib-devel \
+            pkgconf \
+            libuuid-devel
 
 # grpcio-tools grpcio-channelz are needed by python backend
 RUN pip3 install --upgrade pip && \
     pip3 install --upgrade wheel setuptools docker && \
-    pip3 install grpcio-tools grpcio-channelz
-
-# Server build requires recent version of CMake (FetchContent required)
-RUN wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | \
-      gpg --dearmor - |  \
-      tee /etc/apt/trusted.gpg.d/kitware.gpg >/dev/null && \
-    apt-add-repository 'deb https://apt.kitware.com/ubuntu/ focal main' && \
-    apt-get update && \
-    apt-get install -y --no-install-recommends \
-      cmake-data=3.18.4-0kitware1ubuntu20.04.1 cmake=3.18.4-0kitware1ubuntu20.04.1
+    pip3 install make cmake grpcio-tools grpcio-channelz
 '''
 
     # Copy in the triton source. We remove existing contents first in
@@ -608,30 +598,23 @@ RUN userdel tensorrt-server > /dev/null 2>&1 || true && \
     [ `id -u $TRITON_SERVER_USER` -eq 1000 ] && \
     [ `id -g $TRITON_SERVER_USER` -eq 1000 ]
 
-# Ensure apt-get won't prompt for selecting options
-ENV DEBIAN_FRONTEND=noninteractive
-
 # Common dependencies. FIXME (can any of these be conditional? For
 # example libcurl only needed for GCS?)
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-         libb64-0d \
-         libcurl4-openssl-dev \
-         libre2-5 && \
-    rm -rf /var/lib/apt/lists/*
+RUN dnf install -y epel-release && dnf update -y && \
+    dnf install -y libb64-tools libcurl-devel re2
 '''
     # Add dependencies needed for python backend
     if 'python' in backends:
         df += '''
 # python3, python3-pip and some pip installs required for the python backend
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-         python3 \
-         python3-pip && \
+RUN dnf update -y && \
+    dnf install -y \
+        python38 \
+        python38-devel \
+        python38-pip && \
     pip3 install --upgrade pip && \
     pip3 install --upgrade wheel setuptools && \
-    pip3 install --upgrade grpcio-tools grpcio-channelz numpy && \
-    rm -rf /var/lib/apt/lists/*
+    pip3 install --upgrade grpcio-tools grpcio-channelz numpy
 '''
     df += '''
 WORKDIR /opt/tritonserver
