@@ -200,105 +200,105 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-# PyTorch
-cat >$HOST_SRCDIR/$TORCHSCRIPT <<EOF
-#!/bin/bash
-set -e
-python3 $SRCDIR/gen_qa_models.py --libtorch --models_dir=$DESTDIR
-chmod -R 777 $DESTDIR
-python3 $SRCDIR/gen_qa_models.py --libtorch --variable --models_dir=$VARDESTDIR
-chmod -R 777 $VARDESTDIR
-python3 $SRCDIR/gen_qa_identity_models.py --libtorch --models_dir=$IDENTITYDESTDIR
-chmod -R 777 $IDENTITYDESTDIR
-python3 $SRCDIR/gen_qa_reshape_models.py --libtorch --variable --models_dir=$RESHAPEDESTDIR
-chmod -R 777 $RESHAPEDESTDIR
-python3 $SRCDIR/gen_qa_sequence_models.py --libtorch --models_dir=$SEQDESTDIR
-chmod -R 777 $SEQDESTDIR
-python3 $SRCDIR/gen_qa_sequence_models.py --libtorch --variable --models_dir=$VARSEQDESTDIR
-chmod -R 777 $VARSEQDESTDIR
-python3 $SRCDIR/gen_qa_dyna_sequence_models.py --libtorch --models_dir=$DYNASEQDESTDIR
-chmod -R 777 $DYNASEQDESTDIR
-EOF
-
-chmod a+x $HOST_SRCDIR/$TORCHSCRIPT
-if [ $? -ne 0 ]; then
-    echo -e "Failed: chmod"
-    exit 1
-fi
-
-docker pull $PYTORCH_IMAGE
-docker run --gpus device=$CUDA_DEVICE --rm --entrypoint $SRCDIR/$TORCHSCRIPT \
-       --mount type=bind,source=$HOST_SRCDIR,target=$SRCDIR \
-       --mount type=bind,source=$HOST_DESTDIR,target=$DESTDIR \
-       --mount type=bind,source=$HOST_VARDESTDIR,target=$VARDESTDIR \
-       --mount type=bind,source=$HOST_IDENTITYDESTDIR,target=$IDENTITYDESTDIR \
-       --mount type=bind,source=$HOST_RESHAPEDESTDIR,target=$RESHAPEDESTDIR \
-       --mount type=bind,source=$HOST_SEQDESTDIR,target=$SEQDESTDIR \
-       --mount type=bind,source=$HOST_DYNASEQDESTDIR,target=$DYNASEQDESTDIR \
-       --mount type=bind,source=$HOST_VARSEQDESTDIR,target=$VARSEQDESTDIR \
-       $PYTORCH_IMAGE
-if [ $? -ne 0 ]; then
-    echo -e "Failed"
-    exit 1
-fi
-
-# Tensorflow
-cat >$HOST_SRCDIR/$TFSCRIPT <<EOF
-#!/bin/bash
-set -e
-python3 $SRCDIR/gen_qa_models.py --graphdef --savedmodel --models_dir=$DESTDIR
-chmod -R 777 $DESTDIR
-python3 $SRCDIR/gen_qa_models.py --graphdef --savedmodel --variable --models_dir=$VARDESTDIR
-chmod -R 777 $VARDESTDIR
-python3 $SRCDIR/gen_qa_identity_models.py --graphdef --savedmodel --models_dir=$IDENTITYDESTDIR
-chmod -R 777 $IDENTITYDESTDIR
-python3 $SRCDIR/gen_qa_reshape_models.py --graphdef --savedmodel --variable --models_dir=$RESHAPEDESTDIR
-chmod -R 777 $RESHAPEDESTDIR
-python3 $SRCDIR/gen_qa_sequence_models.py --graphdef --savedmodel --models_dir=$SEQDESTDIR
-chmod -R 777 $SEQDESTDIR
-python3 $SRCDIR/gen_qa_sequence_models.py --graphdef --savedmodel --variable --models_dir=$VARSEQDESTDIR
-chmod -R 777 $VARSEQDESTDIR
-python3 $SRCDIR/gen_qa_dyna_sequence_models.py --graphdef --savedmodel --models_dir=$DYNASEQDESTDIR
-chmod -R 777 $DYNASEQDESTDIR
-python3 $SRCDIR/gen_qa_noshape_models.py --savedmodel --models_dir=$NOSHAPEDESTDIR
-chmod -R 777 $NOSHAPEDESTDIR
-python3 $SRCDIR/gen_qa_ragged_models.py --savedmodel --models_dir=$RAGGEDDESTDIR
-chmod -R 777 $RAGGEDDESTDIR
-python3 $SRCDIR/gen_qa_models.py --ensemble --models_dir=$ENSEMBLEDESTDIR/qa_model_repository
-python3 $SRCDIR/gen_qa_models.py --ensemble --variable --models_dir=$ENSEMBLEDESTDIR/qa_variable_model_repository
-python3 $SRCDIR/gen_qa_reshape_models.py --ensemble --models_dir=$ENSEMBLEDESTDIR/qa_reshape_model_repository
-python3 $SRCDIR/gen_qa_identity_models.py --ensemble --models_dir=$ENSEMBLEDESTDIR/qa_identity_model_repository
-python3 $SRCDIR/gen_qa_sequence_models.py --ensemble --models_dir=$ENSEMBLEDESTDIR/qa_sequence_model_repository
-python3 $SRCDIR/gen_qa_sequence_models.py --ensemble --variable --models_dir=$ENSEMBLEDESTDIR/qa_variable_sequence_model_repository
-python3 $SRCDIR/gen_tag_sigdef.py --dir $SIGDEFDESTDIR
-chmod -R 777 $ENSEMBLEDESTDIR
-EOF
-
-chmod a+x $HOST_SRCDIR/$TFSCRIPT
-if [ $? -ne 0 ]; then
-    echo -e "Failed: chmod"
-    exit 1
-fi
-
-docker pull $TENSORFLOW_IMAGE
-docker run --gpus device=$CUDA_DEVICE --rm --entrypoint $SRCDIR/$TFSCRIPT \
-       --mount type=bind,source=$HOST_SRCDIR,target=$SRCDIR \
-       --mount type=bind,source=$HOST_DESTDIR,target=$DESTDIR \
-       --mount type=bind,source=$HOST_VARDESTDIR,target=$VARDESTDIR \
-       --mount type=bind,source=$HOST_IDENTITYDESTDIR,target=$IDENTITYDESTDIR \
-       --mount type=bind,source=$HOST_SIGDEFDESTDIR,target=$SIGDEFDESTDIR \
-       --mount type=bind,source=$HOST_RESHAPEDESTDIR,target=$RESHAPEDESTDIR \
-       --mount type=bind,source=$HOST_SEQDESTDIR,target=$SEQDESTDIR \
-       --mount type=bind,source=$HOST_DYNASEQDESTDIR,target=$DYNASEQDESTDIR \
-       --mount type=bind,source=$HOST_VARSEQDESTDIR,target=$VARSEQDESTDIR \
-       --mount type=bind,source=$HOST_NOSHAPEDESTDIR,target=$NOSHAPEDESTDIR \
-       --mount type=bind,source=$HOST_ENSEMBLEDESTDIR,target=$ENSEMBLEDESTDIR \
-       --mount type=bind,source=$HOST_RAGGEDDESTDIR,target=$RAGGEDDESTDIR \
-       $TENSORFLOW_IMAGE
-if [ $? -ne 0 ]; then
-    echo -e "Failed"
-    exit 1
-fi
+## PyTorch
+#cat >$HOST_SRCDIR/$TORCHSCRIPT <<EOF
+##!/bin/bash
+#set -e
+#python3 $SRCDIR/gen_qa_models.py --libtorch --models_dir=$DESTDIR
+#chmod -R 777 $DESTDIR
+#python3 $SRCDIR/gen_qa_models.py --libtorch --variable --models_dir=$VARDESTDIR
+#chmod -R 777 $VARDESTDIR
+#python3 $SRCDIR/gen_qa_identity_models.py --libtorch --models_dir=$IDENTITYDESTDIR
+#chmod -R 777 $IDENTITYDESTDIR
+#python3 $SRCDIR/gen_qa_reshape_models.py --libtorch --variable --models_dir=$RESHAPEDESTDIR
+#chmod -R 777 $RESHAPEDESTDIR
+#python3 $SRCDIR/gen_qa_sequence_models.py --libtorch --models_dir=$SEQDESTDIR
+#chmod -R 777 $SEQDESTDIR
+#python3 $SRCDIR/gen_qa_sequence_models.py --libtorch --variable --models_dir=$VARSEQDESTDIR
+#chmod -R 777 $VARSEQDESTDIR
+#python3 $SRCDIR/gen_qa_dyna_sequence_models.py --libtorch --models_dir=$DYNASEQDESTDIR
+#chmod -R 777 $DYNASEQDESTDIR
+#EOF
+#
+#chmod a+x $HOST_SRCDIR/$TORCHSCRIPT
+#if [ $? -ne 0 ]; then
+#    echo -e "Failed: chmod"
+#    exit 1
+#fi
+#
+#docker pull $PYTORCH_IMAGE
+#docker run --gpus device=$CUDA_DEVICE --rm --entrypoint $SRCDIR/$TORCHSCRIPT \
+#       --mount type=bind,source=$HOST_SRCDIR,target=$SRCDIR \
+#       --mount type=bind,source=$HOST_DESTDIR,target=$DESTDIR \
+#       --mount type=bind,source=$HOST_VARDESTDIR,target=$VARDESTDIR \
+#       --mount type=bind,source=$HOST_IDENTITYDESTDIR,target=$IDENTITYDESTDIR \
+#       --mount type=bind,source=$HOST_RESHAPEDESTDIR,target=$RESHAPEDESTDIR \
+#       --mount type=bind,source=$HOST_SEQDESTDIR,target=$SEQDESTDIR \
+#       --mount type=bind,source=$HOST_DYNASEQDESTDIR,target=$DYNASEQDESTDIR \
+#       --mount type=bind,source=$HOST_VARSEQDESTDIR,target=$VARSEQDESTDIR \
+#       $PYTORCH_IMAGE
+#if [ $? -ne 0 ]; then
+#    echo -e "Failed"
+#    exit 1
+#fi
+#
+## Tensorflow
+#cat >$HOST_SRCDIR/$TFSCRIPT <<EOF
+##!/bin/bash
+#set -e
+#python3 $SRCDIR/gen_qa_models.py --graphdef --savedmodel --models_dir=$DESTDIR
+#chmod -R 777 $DESTDIR
+#python3 $SRCDIR/gen_qa_models.py --graphdef --savedmodel --variable --models_dir=$VARDESTDIR
+#chmod -R 777 $VARDESTDIR
+#python3 $SRCDIR/gen_qa_identity_models.py --graphdef --savedmodel --models_dir=$IDENTITYDESTDIR
+#chmod -R 777 $IDENTITYDESTDIR
+#python3 $SRCDIR/gen_qa_reshape_models.py --graphdef --savedmodel --variable --models_dir=$RESHAPEDESTDIR
+#chmod -R 777 $RESHAPEDESTDIR
+#python3 $SRCDIR/gen_qa_sequence_models.py --graphdef --savedmodel --models_dir=$SEQDESTDIR
+#chmod -R 777 $SEQDESTDIR
+#python3 $SRCDIR/gen_qa_sequence_models.py --graphdef --savedmodel --variable --models_dir=$VARSEQDESTDIR
+#chmod -R 777 $VARSEQDESTDIR
+#python3 $SRCDIR/gen_qa_dyna_sequence_models.py --graphdef --savedmodel --models_dir=$DYNASEQDESTDIR
+#chmod -R 777 $DYNASEQDESTDIR
+#python3 $SRCDIR/gen_qa_noshape_models.py --savedmodel --models_dir=$NOSHAPEDESTDIR
+#chmod -R 777 $NOSHAPEDESTDIR
+#python3 $SRCDIR/gen_qa_ragged_models.py --savedmodel --models_dir=$RAGGEDDESTDIR
+#chmod -R 777 $RAGGEDDESTDIR
+#python3 $SRCDIR/gen_qa_models.py --ensemble --models_dir=$ENSEMBLEDESTDIR/qa_model_repository
+#python3 $SRCDIR/gen_qa_models.py --ensemble --variable --models_dir=$ENSEMBLEDESTDIR/qa_variable_model_repository
+#python3 $SRCDIR/gen_qa_reshape_models.py --ensemble --models_dir=$ENSEMBLEDESTDIR/qa_reshape_model_repository
+#python3 $SRCDIR/gen_qa_identity_models.py --ensemble --models_dir=$ENSEMBLEDESTDIR/qa_identity_model_repository
+#python3 $SRCDIR/gen_qa_sequence_models.py --ensemble --models_dir=$ENSEMBLEDESTDIR/qa_sequence_model_repository
+#python3 $SRCDIR/gen_qa_sequence_models.py --ensemble --variable --models_dir=$ENSEMBLEDESTDIR/qa_variable_sequence_model_repository
+#python3 $SRCDIR/gen_tag_sigdef.py --dir $SIGDEFDESTDIR
+#chmod -R 777 $ENSEMBLEDESTDIR
+#EOF
+#
+#chmod a+x $HOST_SRCDIR/$TFSCRIPT
+#if [ $? -ne 0 ]; then
+#    echo -e "Failed: chmod"
+#    exit 1
+#fi
+#
+#docker pull $TENSORFLOW_IMAGE
+#docker run --gpus device=$CUDA_DEVICE --rm --entrypoint $SRCDIR/$TFSCRIPT \
+#       --mount type=bind,source=$HOST_SRCDIR,target=$SRCDIR \
+#       --mount type=bind,source=$HOST_DESTDIR,target=$DESTDIR \
+#       --mount type=bind,source=$HOST_VARDESTDIR,target=$VARDESTDIR \
+#       --mount type=bind,source=$HOST_IDENTITYDESTDIR,target=$IDENTITYDESTDIR \
+#       --mount type=bind,source=$HOST_SIGDEFDESTDIR,target=$SIGDEFDESTDIR \
+#       --mount type=bind,source=$HOST_RESHAPEDESTDIR,target=$RESHAPEDESTDIR \
+#       --mount type=bind,source=$HOST_SEQDESTDIR,target=$SEQDESTDIR \
+#       --mount type=bind,source=$HOST_DYNASEQDESTDIR,target=$DYNASEQDESTDIR \
+#       --mount type=bind,source=$HOST_VARSEQDESTDIR,target=$VARSEQDESTDIR \
+#       --mount type=bind,source=$HOST_NOSHAPEDESTDIR,target=$NOSHAPEDESTDIR \
+#       --mount type=bind,source=$HOST_ENSEMBLEDESTDIR,target=$ENSEMBLEDESTDIR \
+#       --mount type=bind,source=$HOST_RAGGEDDESTDIR,target=$RAGGEDDESTDIR \
+#       $TENSORFLOW_IMAGE
+#if [ $? -ne 0 ]; then
+#    echo -e "Failed"
+#    exit 1
+#fi
 
 # TensorRT
 cat >$HOST_SRCDIR/$TRTSCRIPT <<EOF

@@ -25,7 +25,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 # Base image on the minimum Triton container
-ARG BASE_IMAGE=nvcr.io/nvidia/tritonserver:21.07-py3-min
+ARG BASE_IMAGE=docker.io/mgiessing/cuda-ppc64le:11.3.1-cudnn8-tensorrt8-centos8-devel
 
 ARG TRITON_CLIENT_REPO_SUBDIR=clientrepo
 ARG TRITON_COMMON_REPO_TAG=main
@@ -42,51 +42,30 @@ ENV DEBIAN_FRONTEND=noninteractive
 # DCGM version to install for Model Analyzer
 ARG DCGM_VERSION=2.0.13
 
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-            software-properties-common \
+RUN dnf  update && \
+    dnf  install -y \
             autoconf \
             automake \
-            build-essential \
             curl \
             git \
-            libb64-dev \
+            libb64-devel \
             libopencv-dev \
             libopencv-core-dev \
-            libssl-dev \
+            openssl-devel \
             libtool \
-            pkg-config \
-            python3 \
-            python3-pip \
-            python3-dev \
-            rapidjson-dev \
+            pkgconf \
+            python38 \
+            python38-pip \
+            python38-devel \
+            rapidjson-devel \
             vim \
             wget \
-            python3-pdfkit && \
     pip3 install --upgrade wheel setuptools && \
     pip3 install --upgrade grpcio-tools && \
-    pip3 install --upgrade pip
+    pip3 install --upgrade pip && \
+    pip3 install --upgrade pdfkit make cmake
 
 ARG CMAKE_UBUNTU_VERSION
-# Client build requires recent version of CMake (FetchContent required)
-RUN wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | \
-      gpg --dearmor - |  \
-      tee /etc/apt/trusted.gpg.d/kitware.gpg >/dev/null && \
-    if [ "$CMAKE_UBUNTU_VERSION" = "20.04" ]; then \
-      apt-add-repository 'deb https://apt.kitware.com/ubuntu/ focal main' && \
-      apt-get update && \
-      apt-get install -y --no-install-recommends \
-        cmake-data=3.18.4-0kitware1ubuntu20.04.1 cmake=3.18.4-0kitware1ubuntu20.04.1; \
-    elif [ "$CMAKE_UBUNTU_VERSION" = "18.04" ]; then \
-      apt-add-repository 'deb https://apt.kitware.com/ubuntu/ bionic main' && \
-      apt-get update && \
-      apt-get install -y --no-install-recommends \
-        cmake-data=3.18.4-0kitware1 cmake=3.18.4-0kitware1; \
-    else \
-      echo "ERROR: Only support CMAKE_UBUNTU_VERSION to be 18.04 or 20.04" && false; \
-    fi && \
-    cmake --version
-
 # Build expects "python" executable (not python3).
 RUN rm -f /usr/bin/python && \
     ln -s /usr/bin/python3 /usr/bin/python
@@ -131,13 +110,13 @@ COPY qa/images/mug.jpg images/mug.jpg
 # be used to run the client examples.
 RUN pip3 install --upgrade numpy pillow attrdict && \
     find install/python/ -maxdepth 1 -type f -name \
-    "tritonclient-*-manylinux1_x86_64.whl" | xargs printf -- '%s[all]' | \
+    "tritonclient-*-manylinux1_ppc64le.whl" | xargs printf -- '%s[all]' | \
     xargs pip3 install --upgrade
 
 # Install DCGM
 RUN if [ "$TRITON_ENABLE_GPU" = "ON" ]; then \
-      wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/datacenter-gpu-manager_${DCGM_VERSION}_amd64.deb && \
-      dpkg -i datacenter-gpu-manager_${DCGM_VERSION}_amd64.deb; \
+      wget https://developer.download.nvidia.com/compute/cuda/repos/rhel8/ppc64le/datacenter-gpu-manager-${DCGM_VERSION}-1-ppc64le.rpm && \
+      rpm -i datacenter-gpu-manager-${DCGM_VERSION}-1-ppc64le.rpm; \
     fi
 
 # Install Model Analyzer
