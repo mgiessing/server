@@ -69,8 +69,8 @@ TRITON_VERSION_MAP = {
         '21.08',  # triton container
         '21.08',  # upstream container
         '1.8.1',  # ORT
-        '2021.2.200',  # ORT OpenVINO
-        '2021.2',  # Standalone OpenVINO
+        None,  # ORT OpenVINO
+        None,  # Standalone OpenVINO
         '2.2.8')  # DCGM version
 }
 
@@ -485,13 +485,10 @@ def install_dcgm_libraries(dcgm_version):
         return '''
 ENV DCGM_VERSION {}
 # Install DCGM. Steps from https://developer.nvidia.com/dcgm#Downloads
-RUN apt-get update && apt-get install -y --no-install-recommends software-properties-common
-RUN wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-ubuntu2004.pin \
-&& mv cuda-ubuntu2004.pin /etc/apt/preferences.d/cuda-repository-pin-600 \
-&& apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/7fa2af80.pub \
-&& add-apt-repository "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/ /"
-RUN apt-get update \
-&& apt-get install -y datacenter-gpu-manager=1:{}
+RUN dnf install -y dnf-plugins-core
+RUN dnf config-manager --add-repo http://developer.download.nvidia.com/compute/cuda/repos/rhel8/ppc64le/cuda-rhel8.repo
+RUN dnf clean expire-cache && \
+    dnf install -y datacenter-gpu-manager-1:{}-1
 '''.format(dcgm_version, dcgm_version)
 
 
@@ -547,44 +544,39 @@ ENV DEBIAN_FRONTEND=noninteractive
 # python3-dev is needed by Torchvision
 # python3-pip and libarchive-dev is needed by python backend
 # uuid-dev and pkg-config is needed for Azure Storage
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
+RUN dnf groupinstall -y "Development Tools" && dnf install -y epel-release dnf-plugins-core
+RUN dnf config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo
+RUN dnf install -y docker-ce docker-ce-cli
+RUN dnf install -y \
             autoconf \
             automake \
-            build-essential \
-            docker.io \
             git \
-            libre2-dev \
-            libssl-dev \
+            re2-devel \
+            openssl-devel \
             libtool \
-            libboost-dev \
-            libcurl4-openssl-dev \
-            libb64-dev \
+            boost-devel \
+            libcurl-devel \
+            libb64-devel \
             patchelf \
-            python3-dev \
-            python3-pip \
-            python3-setuptools \
-            rapidjson-dev \
-            software-properties-common \
+            python38-devel \
+            python38-pip \
+            python38-setuptools \
+            rapidjson-devel \
             unzip \
             wget \
-            zlib1g-dev \
-            libarchive-dev \
-            pkg-config \
-            uuid-dev && \
-    rm -rf /var/lib/apt/lists/*
+            zlib-devel \
+            pkgconf \
+            libuuid-devel \
+            numactl-devel
+
+RUN wget https://rpmfind.net/linux/centos/8-stream/PowerTools/ppc64le/os/Packages/libarchive-devel-3.3.3-1.el8.ppc64le.rpm && \
+        rpm -ivh libarchive-devel-3.3.3-1.el8.ppc64le.rpm && rm -rf libarchive-devel-3.3.3-1.el8.ppc64le.rpm
 
 RUN pip3 install --upgrade pip && \
-    pip3 install --upgrade wheel setuptools docker
+    pip3 install --upgrade wheel make cmake setuptools docker
 
-# Server build requires recent version of CMake (FetchContent required)
-RUN wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | \
-      gpg --dearmor - |  \
-      tee /etc/apt/trusted.gpg.d/kitware.gpg >/dev/null && \
-    apt-add-repository 'deb https://apt.kitware.com/ubuntu/ focal main' && \
-    apt-get update && \
-    apt-get install -y --no-install-recommends \
-      cmake-data=3.18.4-0kitware1ubuntu20.04.1 cmake=3.18.4-0kitware1ubuntu20.04.1
+#Prometheus cpp git & build?
+
 '''
 
     # Copy in the triton source. We remove existing contents first in
@@ -746,31 +738,28 @@ RUN userdel tensorrt-server > /dev/null 2>&1 || true && \
     [ `id -u $TRITON_SERVER_USER` -eq 1000 ] && \
     [ `id -g $TRITON_SERVER_USER` -eq 1000 ]
 
-# Ensure apt-get won't prompt for selecting options
-ENV DEBIAN_FRONTEND=noninteractive
-
 # Common dependencies. FIXME (can any of these be conditional? For
 # example libcurl only needed for GCS?)
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-         libb64-0d \
-         libcurl4-openssl-dev \
-         libre2-5 && \
-    rm -rf /var/lib/apt/lists/*
+RUN dnf install -y dnf-plugins-core epel-release
+RUN dnf install -y libb64-devel \
+         openssl-devel \
+         re2-devel \
+         numactl
 '''
     df += install_dcgm_libraries(argmap['DCGM_VERSION'])
     # Add dependencies needed for python backend
     if 'python' in backends:
         df += '''
-# python3, python3-pip and some pip installs required for the python backend
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-         python3 libarchive-dev \
-         python3-pip && \
-    pip3 install --upgrade pip && \
+RUN dnf install -y \
+    python38 \
+    python38-devel \
+    python38-pip \
+    wget
+RUN wget https://rpmfind.net/linux/centos/8-stream/PowerTools/ppc64le/os/Packages/libarchive-devel-3.3.3-1.el8.ppc64le.rpm && \
+        rpm -ivh libarchive-devel-3.3.3-1.el8.ppc64le.rpm && rm -rf libarchive-devel-3.3.3-1.el8.ppc64le.rpm
+RUN pip3 install --upgrade pip && \
     pip3 install --upgrade wheel setuptools && \
-    pip3 install --upgrade numpy && \
-    rm -rf /var/lib/apt/lists/*
+    pip3 install --upgrade numpy
 '''
     df += '''
 # Extra defensive wiring for CUDA Compat lib
