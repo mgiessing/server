@@ -50,7 +50,6 @@ RUN dnf install -y \
             opencv-contrib \
             opencv-core \
             openssl-devel \
-            libcurl-devel \
             libtool \
             pkgconf \
             python38 \
@@ -69,6 +68,10 @@ RUN wget https://rpmfind.net/linux/centos/8-stream/PowerTools/ppc64le/os/Package
     rpm -i opencv-3.4.6-6.el8.ppc64le.rpm && rm -rf opencv-3.4.6-6.el8.ppc64le.rpm
 RUN wget https://rpmfind.net/linux/centos/8-stream/PowerTools/ppc64le/os/Packages/opencv-devel-3.4.6-6.el8.ppc64le.rpm && \
     rpm -i opencv-devel-3.4.6-6.el8.ppc64le.rpm && rm -rf opencv-devel-3.4.6-6.el8.ppc64le.rpm
+
+#Libcurl-devel is only available in 7.61 which is too old and will throw an error during build...thus building 7.78 from source
+RUN wget https://curl.se/download/curl-7.78.0.tar.gz && tar -xvf curl-7.78.0.tar.gz && cd curl-7.78.0 && \
+    ./configure --with-openssl && make -j160 && make -j160 install
 
 # Build expects "python" executable (not python3).
 RUN rm -f /usr/bin/python && \
