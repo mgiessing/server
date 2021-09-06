@@ -41,8 +41,7 @@ FROM ${BASE_IMAGE}
 ARG DCGM_VERSION=2.0.13
 
 RUN dnf groupinstall -y "Development Tools" && dnf install -y epel-release dnf-plugins-core
-RUN dnf update -y && \
-    dnf install -y \
+RUN dnf install -y \
             autoconf \
             automake \
             curl \
