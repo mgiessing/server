@@ -50,6 +50,7 @@ RUN dnf install -y \
             opencv-contrib \
             opencv-core \
             openssl-devel \
+            libcurl-devel \
             libtool \
             pkgconf \
             python38 \
