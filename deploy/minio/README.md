@@ -87,15 +87,19 @@ copy of the inference server source repository to create an example
 model repository::
 
 ```
-$ git clone https://github.com/triton-inference-server/server.git
+$ git clone -b ppc64le_v2.13.0 https://github.com/mgiessing/server.git
 ```
 
 Triton Server needs a repository of models that it will make available
 for inferencing. For this example you will place the model repository
-in an AWS S3 Storage bucket.
+in an MinIO S3 Storage bucket.
 
 ```
-$ aws mb s3://triton-inference-server-repository
+export MINIO_URL="http://..."
+wget https://dl.min.io/client/mc/release/linux-ppc64le/mc && chmod +x mc && mv mc /usr/local/bin/
+mc alias set minio ${MINIO_URL} minio minio123 --api S3v4
+mc mb minio/triton-inference-server-repository
+mc ls --recursive minio
 ```
 
 Following the [QuickStart](../../docs/quickstart.md) download the
@@ -103,18 +107,16 @@ example model repository to your system and copy it into the AWS S3
 bucket.
 
 ```
-$ aws cp -r docs/examples/model_repository s3://triton-inference-server-repository/model_repository
+mc cp -r docs/examples/model_repository minio/triton-inference-server-repository
 ```
 
 ### AWS Model Repository
-To load the model from the AWS S3, you need to convert the following AWS credentials in the base64 format and add it to the values.yaml
+To load the model from the MinIO S3, you need to convert the following credentials in the base64 format and add it to the values.yaml
 
-```
-echo -n 'REGION' | base64
-```
 ```
 echo -n 'SECRECT_KEY_ID' | base64
 ```
+
 ```
 echo -n 'SECRET_ACCESS_KEY' | base64
 ```
@@ -156,14 +158,14 @@ following commands.
 
 ```
 $ cd <directory containing Chart.yaml>
-$ helm install --name example .
+$ helm install example .
 ```
 
 Use kubectl to see status and wait until the inference server pods are
 running.
 
 ```
-$ kubectl get pods
+$ oc get pods
 NAME                                               READY   STATUS    RESTARTS   AGE
 example-triton-inference-server-5f74b55885-n6lt7   1/1     Running   0          2m21s
 ```
@@ -178,7 +180,7 @@ deploy a cluster of four inference servers use *--set* to set the
 replicaCount parameter.
 
 ```
-$ helm install --name example --set replicaCount=4 .
+$ helm install example --set replicaCount=4 .
 ```
 
 You can also write your own "config.yaml" file with the values you
@@ -188,10 +190,10 @@ want to override and pass it to helm.
 $ cat << EOF > config.yaml
 namespace: MyCustomNamespace
 image:
-  imageName: nvcr.io/nvidia/tritonserver:custom-tag
+  imageName: quay.io/ibm/tritonserver-ppc64le:custom-tag
   modelRepositoryPath: gs://my_model_repository
 EOF
-$ helm install --name example -f config.yaml .
+$ helm install example -f config.yaml .
 ```
 
 ## Using Triton Inference Server
@@ -203,10 +205,18 @@ to find the external IP for the inference server. In this case it is
 34.83.9.133.
 
 ```
-$ kubectl get services
+$ oc get services
 NAME                             TYPE           CLUSTER-IP     EXTERNAL-IP   PORT(S)                                        AGE
 ...
-example-triton-inference-server  LoadBalancer   10.18.13.28    34.83.9.133   8000:30249/TCP,8001:30068/TCP,8002:32723/TCP   47m
+example-triton-inference-server  LoadBalancer   172.30.183.213 <pending>     8000:32588/TCP,8001:32091/TCP,8002:30254/TCP   6m52s
+
+```
+
+```
+$ oc expose svc example-triton-inference-server
+$ oc get routes
+NAME                              HOST/PORT                                                            PATH   SERVICES                          PORT                    TERMINATION   WILDCARD
+example-triton-inference-server   example-triton-inference-server-kubeflow.apps.p1220.cecc.ihost.com          example-triton-inference-server   http-inference-server                 None
 ```
 
 The inference server exposes an HTTP endpoint on port 8000, and GRPC
@@ -215,7 +225,7 @@ port 8002. You can use curl to get the meta-data of the inference server
 from the HTTP endpoint.
 
 ```
-$ curl 34.83.9.133:8000/v2
+$ curl example-triton-inference-server-kubeflow.apps.p1220.cecc.ihost.com:80/v2
 ```
 
 Follow the [QuickStart](../../docs/quickstart.md) to get the example
@@ -224,7 +234,7 @@ using image classification models being served by the inference
 server. For example,
 
 ```
-$ image_client -u 34.83.9.133:8000 -m inception_graphdef -s INCEPTION -c3 mug.jpg
+$ image_client -u example-triton-inference-server-kubeflow.apps.p1220.cecc.ihost.com:80 -m densenet_onnx -s INCEPTION -c3 mug.jpg
 Request 0, batch size 1
 Image 'images/mug.jpg':
     504 (COFFEE MUG) = 0.723992
@@ -243,8 +253,8 @@ NAME            REVISION  UPDATED                   STATUS    CHART             
 example         1         Wed Feb 27 22:16:55 2019  DEPLOYED  triton-inference-server-1.0.0  1.0           default
 example-metrics	1       	Tue Jan 21 12:24:07 2020	DEPLOYED	prometheus-operator-6.18.0   	 0.32.0     	 default
 
-$ helm delete --purge example
-$ helm delete --purge example-metrics
+$ helm delete example
+$ helm delete example-metrics
 ```
 
 For the Prometheus and Grafana services you should [explicitly delete
@@ -258,5 +268,5 @@ You may also want to delete the AWS bucket you created to hold the
 model repository.
 
 ```
-$ aws s3 rm -r gs://triton-inference-server-repository
+$ oc s3 rm -r gs://triton-inference-server-repository
 ```

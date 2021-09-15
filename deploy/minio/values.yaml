@@ -29,7 +29,7 @@ replicaCount: 1
 image:
   imageName: quay.io/ibm/tritonserver-ppc64le:v2.13.0
   pullPolicy: IfNotPresent
-  modelRepositoryPath: s3://<minio-hostname>:80/bucket-1/model-repository # on OCP get with: oc get routes -A | grep minio
+  modelRepositoryPath: s3://minio-service-kubeflow.apps.p1220.cecc.ihost.com:80/triton-inference-server-repository/model_repository #On OCP get the route with: oc get routes -A | grep minio
   numGpus: 0
 
 service:
