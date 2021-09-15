@@ -95,33 +95,40 @@ for inferencing. For this example you will place the model repository
 in an MinIO S3 Storage bucket.
 
 ```
-export MINIO_URL="http://..."
-wget https://dl.min.io/client/mc/release/linux-ppc64le/mc && chmod +x mc && mv mc /usr/local/bin/
-mc alias set minio ${MINIO_URL} minio minio123 --api S3v4
-mc mb minio/triton-inference-server-repository
-mc ls --recursive minio
+$ export MINIO_URL="http://minio-service-kubeflow.apps.p1220.cecc.ihost.com"
+$ wget https://dl.min.io/client/mc/release/linux-ppc64le/mc && chmod +x mc && mv mc /usr/local/bin/
+$ mc alias set minio ${MINIO_URL} minio minio123 --api S3v4
+Added `minio` successfully.
+$ mc mb minio/triton-inference-server-repository
+Bucket created successfully `minio/triton-inference-server-repository`.
 ```
 
 Following the [QuickStart](../../docs/quickstart.md) download the
-example model repository to your system and copy it into the AWS S3
-bucket.
+example model repository to your system and copy it into the MinIO S3
+bucket. <br>
+
+**Delete all models except for densenet_onnx which we will serve with TRTI!**
 
 ```
-mc cp -r docs/examples/model_repository minio/triton-inference-server-repository
+$ mc cp -r docs/examples/model_repository minio/triton-inference-server-repository
+$ mc ls minio --recursive
+[2021-09-15 13:50:48 EDT]  31MiB triton-inference-server-repository/model_repository/densenet_onnx/1/model.onnx
+[2021-09-15 13:50:47 EDT]   387B triton-inference-server-repository/model_repository/densenet_onnx/config.pbtxt
+[2021-09-15 13:50:47 EDT]  10KiB triton-inference-server-repository/model_repository/densenet_onnx/densenet_labels.txt
 ```
 
-### AWS Model Repository
+### MinIO Model Repository
 To load the model from the MinIO S3, you need to convert the following credentials in the base64 format and add it to the values.yaml
 
 ```
-echo -n 'SECRECT_KEY_ID' | base64
+$ echo -n 'SECRECT_KEY_ID' | base64
 ```
 
 ```
-echo -n 'SECRET_ACCESS_KEY' | base64
+$ echo -n 'SECRET_ACCESS_KEY' | base64
 ```
 
-## Deploy Prometheus and Grafana
+## Deploy Prometheus and Grafana (Not tested on Power!)
 
 The inference server metrics are collected by Prometheus and viewable
 by Grafana. The inference server helm chart assumes that Prometheus
@@ -134,14 +141,14 @@ Prometheus can find the inference server metrics in the *example*
 release deployed below.
 
 ```
-$ helm install --name example-metrics --set prometheus.prometheusSpec.serviceMonitorSelectorNilUsesHelmValues=false stable/prometheus-operator
+$ helm install example-metrics --set prometheus.prometheusSpec.serviceMonitorSelectorNilUsesHelmValues=false stable/prometheus-operator
 ```
 
 Then port-forward to the Grafana service so you can access it from
 your local browser.
 
 ```
-$ kubectl port-forward service/example-metrics-grafana 8080:80
+$ oc port-forward service/example-metrics-grafana 8080:80
 ```
 
 Now you should be able to navigate in your browser to localhost:8080
