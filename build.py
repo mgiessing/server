@@ -68,10 +68,10 @@ TRITON_VERSION_MAP = {
     '2.16.0': (
         '21.11',  # triton container
         '21.11',  # upstream container
-        '1.9.0',  # ORT
-        '2021.2.200',  # ORT OpenVINO
-        '2021.2',  # Standalone OpenVINO
-        '2.2.9')  # DCGM version
+        '1.9.0',  # OR
+        None,  # ORT OpenVINO
+        None,  # Standalone OpenVINO
+        None)  # DCGM version
 }
 
 EXAMPLE_BACKENDS = ['identity', 'square', 'repeat']
@@ -629,16 +629,8 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 RUN pip3 install --upgrade pip && \
-    pip3 install --upgrade wheel setuptools docker
+    pip3 install --upgrade wheel setuptools docker make cmake
 
-# Server build requires recent version of CMake (FetchContent required)
-RUN wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | \
-      gpg --dearmor - |  \
-      tee /etc/apt/trusted.gpg.d/kitware.gpg >/dev/null && \
-    apt-add-repository 'deb https://apt.kitware.com/ubuntu/ focal main' && \
-    apt-get update && \
-    apt-get install -y --no-install-recommends \
-      cmake-data=3.21.1-0kitware1ubuntu20.04.1 cmake=3.21.1-0kitware1ubuntu20.04.1
 '''
 
     # Copy in the triton source. We remove existing contents first in
@@ -827,7 +819,7 @@ RUN apt-get update && \
             software-properties-common \
             libb64-0d \
             libcurl4-openssl-dev \
-            libre2-5 \
+            libre2-9 \
             git \
             dirmngr \
             libnuma-dev \
@@ -851,6 +843,9 @@ RUN ln -sf ${_CUDA_COMPAT_PATH}/lib.real ${_CUDA_COMPAT_PATH}/lib \
     if 'python' in backends:
         df += '''
 # python3, python3-pip and some pip installs required for the python backend
+RUN mkdir ~/.pip && \
+    echo "[global]" >> ~/.pip/pip.conf && \
+    echo "extra-index-url = https://repo.fury.io/mgiessing" >> ~/.pip/pip.conf
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
             python3 libarchive-dev \
@@ -858,7 +853,7 @@ RUN apt-get update && \
             libpython3-dev && \
     pip3 install --upgrade pip && \
     pip3 install --upgrade wheel setuptools && \
-    pip3 install --upgrade numpy && \
+    pip3 install --upgrade numpy==1.21.4 && \
     rm -rf /var/lib/apt/lists/*
 '''
     df += '''
